@@ -303,10 +303,10 @@ window.viewHistoricoCliente = async function (id) {
         };
     }
 
-    // Buscar receitas do cliente
+    // Buscar receitas do cliente com nome da ótica
     const { data: receitas, error } = await supabaseClient
         .from('receitas')
-        .select('*')
+        .select('*, oticas(nome)') // <--- Adicionado join com oticas
         .eq('cliente_id', id)
         .order('data', { ascending: false });
 
@@ -328,10 +328,10 @@ window.viewHistoricoCliente = async function (id) {
         content.innerHTML = `
             <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                 ${receitas.map(r => `
-                    <button onclick="closeModal('modalHistoricoCliente'); viewReceita('${r.id}')" 
+                    <button onclick="closeModal('modalHistoricoCliente'); viewReceita('${r.id}')"
                             style="
-                                display: flex; 
-                                justify-content: space-between; 
+                                display: flex;
+                                justify-content: space-between;
                                 align-items: center;
                                 width: 100%;
                                 background: var(--bg-dark);
@@ -347,8 +347,11 @@ window.viewHistoricoCliente = async function (id) {
                     >
                         <div style="text-align: left;">
                             <strong style="display: block; font-size: 1rem;">📅 ${Utils.formatDate(r.data)}</strong>
-                            <span style="font-size: 0.85rem; color: var(--text-muted);">${Utils.getServiceName(r.tipo_servico)}</span>
+                            <span style="font-size: 0.85rem; color: var(--text-muted);">
+                                ${Utils.getServiceName(r.tipo_servico)} • 🏪 ${r.oticas?.nome || 'Loja desconhecida'}
+                            </span>
                         </div>
+                        <span style="font-size: 1.25rem;">👉</span>
                     </button>
                 `).join('')}
             </div>
