@@ -910,10 +910,11 @@ async function updateDashboard() {
     } else {
         container.innerHTML = recent.map(r => {
             const cliente = clientesList?.find(c => c.id === r.cliente_id);
-            return `< div style = "display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border);" >
-                <span>${cliente?.nome || 'Cliente'}</span>
-                <span style="color: var(--text-muted);">${Utils.formatDate(r.data)}</span>
-            </div > `;
+            return `
+            <div style="display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border);">
+                <span style="font-weight: 500;">${cliente?.nome || 'Cliente Removido'}</span>
+                <span style="color: var(--text-muted); font-size: 0.9rem;">${Utils.formatDate(r.data)}</span>
+            </div>`;
         }).join('');
     }
 }
