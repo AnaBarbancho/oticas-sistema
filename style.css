@@ -38,14 +38,14 @@ body {
 
 /* Sidebar */
 .sidebar {
-    width: 280px;
+    width: 220px;
     background: var(--bg-card);
     height: 100vh;
     position: fixed;
     left: 0;
     top: 0;
     border-right: 1px solid var(--border);
-    padding: 1.5rem;
+    padding: 1.25rem;
     display: flex;
     flex-direction: column;
     z-index: 1000;
@@ -57,9 +57,10 @@ body {
 }
 
 .sidebar-header {
-    padding: 1.5rem;
+    padding: 1rem 1.25rem;
     border-bottom: 1px solid var(--border);
 }
+
 
 .logo {
     display: flex;
@@ -111,12 +112,14 @@ body {
     font-size: 1.25rem;
 }
 
+
 /* Main Content */
 .main-content {
-    margin-left: 260px;
+    margin-left: 220px;
     flex: 1;
     min-height: 100vh;
-    padding: 1.5rem;
+    padding: 2.5rem;
+    max-width: 1600px;
 }
 
 .header {
