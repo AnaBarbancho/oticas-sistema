@@ -334,7 +334,6 @@ window.viewHistoricoCliente = async function (id) {
                             <strong style="display: block; font-size: 1rem;">📅 ${Utils.formatDate(r.data)}</strong>
                             <span style="font-size: 0.85rem; color: var(--text-muted);">${Utils.getServiceName(r.tipo_servico)}</span>
                         </div>
-                        <span style="font-size: 1.25rem;">👉</span>
                     </button>
                 `).join('')}
             </div>
@@ -346,6 +345,55 @@ window.viewHistoricoCliente = async function (id) {
 
 document.getElementById('filterOticaCliente').addEventListener('change', renderClientes);
 document.getElementById('searchCliente').addEventListener('input', renderClientes);
+
+// ===== LOGIN =====
+async function checkLogin() {
+    const isLogged = localStorage.getItem('oticas_logged_in');
+    if (!isLogged) {
+        document.getElementById('loginOverlay').style.display = 'flex';
+        showLoading(false);
+    } else {
+        document.getElementById('loginOverlay').style.display = 'none';
+        await loadSystem();
+    }
+}
+
+async function doLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value;
+    const pass = document.getElementById('loginPass').value;
+    const btn = document.getElementById('btnLogin');
+
+    btn.disabled = true;
+    btn.textContent = 'Verificando...';
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('usuarios_admin')
+            .select('*')
+            .eq('email', email)
+            .eq('senha', pass)
+            .single();
+
+        if (error || !data) throw new Error('Dados inválidos');
+
+        localStorage.setItem('oticas_logged_in', 'true');
+        document.getElementById('loginOverlay').style.display = 'none';
+        showToast('Bem-vindo(a), ' + email.split('@')[0]);
+        await loadSystem();
+
+    } catch (err) {
+        showToast('Email ou senha incorretos!', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Entrar no Sistema';
+    }
+}
+
+document.getElementById('formLogin')?.addEventListener('submit', doLogin);
+document.getElementById('btnLogout').addEventListener('click', () => {
+    localStorage.removeItem('oticas_logged_in');
+    window.location.reload();
+});
 
 // ===== RECEITAS =====
 async function renderReceitas() {
@@ -752,7 +800,7 @@ async function updateDashboard() {
 }
 
 // ===== INIT =====
-async function init() {
+async function loadSystem() {
     showLoading();
     await updateFilters();
     await updateDashboard();
@@ -761,7 +809,11 @@ async function init() {
     await renderReceitas();
     await renderPagamentos();
     showLoading(false);
-    console.log('✅ Sistema carregado com Supabase!');
+    console.log('✅ Sistema carregado!');
+}
+
+function init() {
+    checkLogin();
 }
 
 init();

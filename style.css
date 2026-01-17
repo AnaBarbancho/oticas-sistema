@@ -38,17 +38,23 @@ body {
 
 /* Sidebar */
 .sidebar {
-    width: 260px;
-    background: var(--bg-card);
+    width: 280px;
+    background: rgba(23, 23, 23, 0.95);
+    backdrop-filter: blur(20px);
     height: 100vh;
     position: fixed;
     left: 0;
     top: 0;
     border-right: 1px solid var(--border);
+    padding: 1.5rem;
     display: flex;
     flex-direction: column;
-    z-index: 100;
+    z-index: 1000;
     transition: transform 0.3s ease;
+}
+
+#loginOverlay {
+    z-index: 99999 !important;
 }
 
 .sidebar-header {
