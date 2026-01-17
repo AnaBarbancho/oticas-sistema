@@ -170,11 +170,45 @@ document.getElementById('searchOtica').addEventListener('input', renderOticas);
 
 // ===== CLIENTES =====
 async function loadClientes(oticaId = null) {
+    let clientes = [];
+
+    // 1. Clientes cadastrados na ótica (ou todos se oticaId for null)
     let query = supabaseClient.from('clientes').select('*, oticas(nome)').order('nome');
     if (oticaId) query = query.eq('otica_id', oticaId);
-    const { data, error } = await query;
+
+    const { data: clientesCadastrados, error } = await query;
     if (error) { showToast('Erro: ' + error.message, 'error'); return []; }
-    return data || [];
+    clientes = clientesCadastrados || [];
+
+    // 2. Se tiver filtro de ótica, buscar clientes de outras lojas que têm receita nesta ótica
+    if (oticaId) {
+        // Busca receitas desta ótica onde o cliente NÃO é desta ótica
+        const { data: receitasOutros } = await supabaseClient
+            .from('receitas')
+            .select('cliente_id, clientes(*, oticas(nome))')
+            .eq('otica_id', oticaId);
+
+        if (receitasOutros && receitasOutros.length > 0) {
+            // Extrai os clientes das receitas
+            const outrosClientes = receitasOutros
+                .map(r => r.clientes)
+                .filter(c => c && c.otica_id !== oticaId); // Filtra para não duplicar se já veio na 1ª query
+
+            // Adiciona à lista principal evitando duplicatas (por ID)
+            const idsAtuais = new Set(clientes.map(c => c.id));
+            outrosClientes.forEach(c => {
+                if (!idsAtuais.has(c.id)) {
+                    // Marcamos visualmente que é um cliente "Visitante" (opcional)
+                    // c.nome += ' (Visitante)'; 
+                    clientes.push(c);
+                    idsAtuais.add(c.id);
+                }
+            });
+        }
+    }
+
+    // Reordena por nome
+    return clientes.sort((a, b) => a.nome.localeCompare(b.nome));
 }
 
 async function renderClientes() {
