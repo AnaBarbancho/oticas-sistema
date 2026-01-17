@@ -285,9 +285,24 @@ window.deleteCliente = async function (id) {
     updateDashboard();
 };
 
+// Variável para armazenar cliente selecionado no histórico
+let clienteHistoricoAtual = null;
+let isDirectReceitaInsertion = false; // Flag para controlar inserção direta
+
 // Função para ver histórico (Substitui viewClienteReceitas antiga)
 window.viewHistoricoCliente = async function (id) {
     showLoading();
+    clienteHistoricoAtual = id; // Salva ID para uso no botão "Nova Receita"
+
+    // Configura o botão de Nova Receita Direta
+    const btnNova = document.getElementById('btnNovaReceitaDireta');
+    if (btnNova) {
+        btnNova.onclick = () => {
+            closeModal('modalHistoricoCliente');
+            abrirNovaReceitaDireta(id);
+        };
+    }
+
     // Buscar receitas do cliente
     const { data: receitas, error } = await supabaseClient
         .from('receitas')
@@ -342,6 +357,32 @@ window.viewHistoricoCliente = async function (id) {
 
     openModal('modalHistoricoCliente');
 };
+
+// Nova Função: Abrir receita pré-selecionada
+async function abrirNovaReceitaDireta(clienteId) {
+    document.getElementById('formReceita').reset();
+    document.getElementById('receitaId').value = '';
+    document.getElementById('receitaData').value = new Date().toISOString().split('T')[0];
+    document.getElementById('modalReceitaTitle').textContent = 'Nova Receita';
+
+    // Busca dados do cliente para preencher o select (mesmo se não estiver na lista padrão)
+    const { data: cliente } = await supabaseClient.from('clientes').select('*').eq('id', clienteId).single();
+
+    if (cliente) {
+        isDirectReceitaInsertion = true; // Ativa a flag para evitar limpeza do cliente
+        // Popula ótica com TODAS as óticas
+        await populateOticaSelect('receitaOtica');
+
+        // Define a ótica do cliente como padrão inicial
+        document.getElementById('receitaOtica').value = cliente.otica_id;
+
+        // Popula o select de clientes FORÇANDO o cliente atual
+        const selectCliente = document.getElementById('receitaCliente');
+        selectCliente.innerHTML = `<option value="${cliente.id}" selected>${cliente.nome}</option>`;
+    }
+
+    openModal('modalReceita');
+}
 
 document.getElementById('filterOticaCliente').addEventListener('change', renderClientes);
 document.getElementById('searchCliente').addEventListener('input', renderClientes);
@@ -450,6 +491,7 @@ async function renderReceitas() {
 }
 
 document.getElementById('btnNovaReceita').addEventListener('click', async () => {
+    isDirectReceitaInsertion = false;
     document.getElementById('formReceita').reset();
     document.getElementById('receitaId').value = '';
     document.getElementById('receitaData').value = new Date().toISOString().split('T')[0];
@@ -460,6 +502,11 @@ document.getElementById('btnNovaReceita').addEventListener('click', async () => 
 });
 
 document.getElementById('receitaOtica').addEventListener('change', async (e) => {
+    if (isDirectReceitaInsertion) {
+        // Se for inserção direta, NÃO limpa o cliente, apenas permite mudar a loja de atendimento
+        // Mas a flag deve ser resetada na próxima vez que abrir o modal normalmente
+        return;
+    }
     const oticaId = e.target.value;
     const { data: clientes } = await supabaseClient.from('clientes').select('id, nome').eq('otica_id', oticaId).order('nome');
     const select = document.getElementById('receitaCliente');

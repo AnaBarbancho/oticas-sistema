@@ -105,7 +105,10 @@ document.getElementById('modals').innerHTML = `
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Histórico de Exames</h3>
-                <button class="modal-close" data-modal="modalHistoricoCliente">&times;</button>
+                <div style="display:flex; gap:1rem; align-items:center;">
+                    <button class="btn-primary btn-sm" id="btnNovaReceitaDireta">➕ Nova Receita</button>
+                    <button class="modal-close" data-modal="modalHistoricoCliente">&times;</button>
+                </div>
             </div>
             <div class="modal-body" style="padding: 1.5rem;">
                 <div id="historicoClienteContent">
