@@ -206,7 +206,7 @@ async function renderClientes() {
                 <td>${ultimaReceita ? Utils.formatDate(ultimaReceita.data) : '-'}</td>
                 <td class="actions">
                     <button class="btn-secondary btn-sm" onclick="editCliente('${c.id}')">✏️</button>
-                    <button class="btn-secondary btn-sm" onclick="viewClienteReceitas('${c.id}')">📋</button>
+                    <button class="btn-secondary btn-sm" onclick="viewHistoricoCliente('${c.id}')">📋</button>
                     <button class="btn-secondary btn-sm btn-danger" onclick="deleteCliente('${c.id}')">🗑️</button>
                 </td>
             </tr>
@@ -285,10 +285,63 @@ window.deleteCliente = async function (id) {
     updateDashboard();
 };
 
-window.viewClienteReceitas = function (id) {
-    document.getElementById('filterClienteReceita').value = id;
-    document.querySelector('[data-page="receitas"]').click();
-    renderReceitas();
+// Função para ver histórico (Substitui viewClienteReceitas antiga)
+window.viewHistoricoCliente = async function (id) {
+    showLoading();
+    // Buscar receitas do cliente
+    const { data: receitas, error } = await supabaseClient
+        .from('receitas')
+        .select('*')
+        .eq('cliente_id', id)
+        .order('data', { ascending: false });
+
+    showLoading(false);
+
+    if (error) {
+        showToast('Erro ao carregar histórico: ' + error.message, 'error');
+        return;
+    }
+
+    const content = document.getElementById('historicoClienteContent');
+    const empty = document.getElementById('historicoEmptyState');
+
+    if (!receitas || receitas.length === 0) {
+        content.innerHTML = '';
+        empty.style.display = 'block';
+    } else {
+        empty.style.display = 'none';
+        content.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                ${receitas.map(r => `
+                    <button onclick="viewReceita('${r.id}')" 
+                            style="
+                                display: flex; 
+                                justify-content: space-between; 
+                                align-items: center;
+                                width: 100%;
+                                background: var(--bg-dark);
+                                border: 1px solid var(--border);
+                                padding: 1rem;
+                                border-radius: 0.5rem;
+                                color: var(--text);
+                                cursor: pointer;
+                                transition: all 0.2s;
+                            "
+                            onmouseover="this.style.borderColor='var(--primary)'; this.style.background='var(--bg-card-hover)'"
+                            onmouseout="this.style.borderColor='var(--border)'; this.style.background='var(--bg-dark)'"
+                    >
+                        <div style="text-align: left;">
+                            <strong style="display: block; font-size: 1rem;">📅 ${Utils.formatDate(r.data)}</strong>
+                            <span style="font-size: 0.85rem; color: var(--text-muted);">${Utils.getServiceName(r.tipo_servico)}</span>
+                        </div>
+                        <span style="font-size: 1.25rem;">👉</span>
+                    </button>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    openModal('modalHistoricoCliente');
 };
 
 document.getElementById('filterOticaCliente').addEventListener('change', renderClientes);

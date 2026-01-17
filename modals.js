@@ -100,4 +100,24 @@ document.getElementById('modals').innerHTML = `
             <div class="form-actions" style="padding: 1.5rem; border-top: 1px solid var(--border);"><button type="button" class="btn-secondary" data-modal="modalViewReceita">Fechar</button><button type="button" class="btn-primary" id="btnPrintReceita">🖨️ Imprimir</button></div>
         </div>
     </div>
+
+    <div class="modal" id="modalHistoricoCliente">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Histórico de Exames</h3>
+                <button class="modal-close" data-modal="modalHistoricoCliente">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <div id="historicoClienteContent">
+                    <!-- Lista de datas será injetada aqui -->
+                </div>
+                <div id="historicoEmptyState" class="empty-state" style="display:none; padding: 1rem 0;">
+                    Nenhum exame encontrado para este cliente.
+                </div>
+            </div>
+            <div class="form-actions" style="padding:1.5rem;border-top:1px solid var(--border);">
+                <button type="button" class="btn-secondary" data-modal="modalHistoricoCliente">Fechar</button>
+            </div>
+        </div>
+    </div>
 `;
