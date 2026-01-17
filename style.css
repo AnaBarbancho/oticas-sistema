@@ -39,8 +39,7 @@ body {
 /* Sidebar */
 .sidebar {
     width: 280px;
-    background: rgba(23, 23, 23, 0.95);
-    backdrop-filter: blur(20px);
+    background: var(--bg-card);
     height: 100vh;
     position: fixed;
     left: 0;
