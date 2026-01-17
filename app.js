@@ -160,10 +160,21 @@ window.deleteOtica = async function (id) {
     updateDashboard();
 };
 
-window.viewOticaClientes = function (id) {
-    document.getElementById('filterOticaCliente').value = id;
+window.viewOticaClientes = async function (id) {
+    showLoading();
+    // Garante que o select esteja populado
+    await populateOticaSelect('filterOticaCliente');
+
+    // Define o valor do filtro
+    const select = document.getElementById('filterOticaCliente');
+    select.value = id;
+
+    // Navega para a aba Clientes
     document.querySelector('[data-page="clientes"]').click();
-    renderClientes();
+
+    // Força a renderização com o novo filtro
+    await renderClientes();
+    showLoading(false);
 };
 
 document.getElementById('searchOtica').addEventListener('input', renderOticas);
