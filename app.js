@@ -162,15 +162,19 @@ window.deleteOtica = async function (id) {
 
 window.viewOticaClientes = async function (id) {
     showLoading();
-    // Garante que o select esteja populado
-    await populateOticaSelect('filterOticaCliente');
-
-    // Define o valor do filtro
-    const select = document.getElementById('filterOticaCliente');
-    select.value = id;
 
     // Navega para a aba Clientes
     document.querySelector('[data-page="clientes"]').click();
+
+    // Aguarda um pouco para garantir que a aba foi carregada
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Garante que o select esteja populado com todas as óticas
+    await updateFilters();
+
+    // Define o valor do filtro para a ótica específica
+    const select = document.getElementById('filterOticaCliente');
+    select.value = id;
 
     // Força a renderização com o novo filtro
     await renderClientes();
@@ -185,14 +189,19 @@ async function loadClientes(oticaId = null) {
 
     // 1. Clientes cadastrados na ótica (ou todos se oticaId for null)
     let query = supabaseClient.from('clientes').select('*, oticas(nome)').order('nome');
-    if (oticaId) query = query.eq('otica_id', oticaId);
+
+    if (oticaId === 'particular') {
+        query = query.is('otica_id', null);
+    } else if (oticaId) {
+        query = query.eq('otica_id', oticaId);
+    }
 
     const { data: clientesCadastrados, error } = await query;
     if (error) { showToast('Erro: ' + error.message, 'error'); return []; }
     clientes = clientesCadastrados || [];
 
-    // 2. Se tiver filtro de ótica, buscar clientes de outras lojas que têm receita nesta ótica
-    if (oticaId) {
+    // 2. Se tiver filtro de ótica (e não for particular), buscar clientes de outras lojas que têm receita nesta ótica
+    if (oticaId && oticaId !== 'particular') {
         // Busca receitas desta ótica onde o cliente NÃO é desta ótica
         const { data: receitasOutros } = await supabaseClient
             .from('receitas')
@@ -243,11 +252,12 @@ async function renderClientes() {
 
     container.innerHTML = clientes.map(c => {
         const ultimaReceita = receitas?.find(r => r.cliente_id === c.id);
+        const oticaNome = c.oticas?.nome || (c.otica_id ? '-' : '👤 Particular');
         return `
             <tr>
                 <td><strong>${c.nome}</strong></td>
                 <td>${c.telefone || '-'}</td>
-                <td>${c.oticas?.nome || '-'}</td>
+                <td>${oticaNome}</td>
                 <td>${ultimaReceita ? Utils.formatDate(ultimaReceita.data) : '-'}</td>
                 <td class="actions">
                     <button class="btn-secondary btn-sm" onclick="editCliente('${c.id}')">✏️</button>
@@ -263,7 +273,7 @@ document.getElementById('btnNovoCliente').addEventListener('click', async () => 
     document.getElementById('formCliente').reset();
     document.getElementById('clienteId').value = '';
     document.getElementById('modalClienteTitle').textContent = 'Novo Cliente';
-    await populateOticaSelect('clienteOtica');
+    await populateOticaSelect('clienteOtica', '👤 Paciente Particular (Sem vínculo)');
     openModal('modalCliente');
 });
 
@@ -272,9 +282,10 @@ document.getElementById('formCliente').addEventListener('submit', async (e) => {
     showLoading();
 
     const id = document.getElementById('clienteId').value;
+    const oticaValue = document.getElementById('clienteOtica').value;
     const data = {
         nome: document.getElementById('clienteNome').value,
-        otica_id: document.getElementById('clienteOtica').value,
+        otica_id: oticaValue || null, // null se for paciente particular
         cpf: document.getElementById('clienteCPF').value,
         data_nasc: document.getElementById('clienteDataNasc').value || null,
         telefone: document.getElementById('clienteTelefone').value,
@@ -301,7 +312,7 @@ document.getElementById('formCliente').addEventListener('submit', async (e) => {
 });
 
 window.editCliente = async function (id) {
-    await populateOticaSelect('clienteOtica');
+    await populateOticaSelect('clienteOtica', '👤 Paciente Particular (Sem vínculo)');
     const { data: cliente } = await supabaseClient.from('clientes').select('*').eq('id', id).single();
     if (!cliente) return;
 
@@ -492,7 +503,13 @@ async function renderReceitas() {
     const filterData = document.getElementById('filterDataReceita').value;
 
     let query = supabaseClient.from('receitas').select('*, clientes(nome), oticas(nome)').order('data', { ascending: false });
-    if (filterOtica) query = query.eq('otica_id', filterOtica);
+
+    if (filterOtica === 'particular') {
+        query = query.is('otica_id', null);
+    } else if (filterOtica) {
+        query = query.eq('otica_id', filterOtica);
+    }
+
     if (filterCliente) query = query.eq('cliente_id', filterCliente);
     if (filterData) query = query.eq('data', filterData);
 
@@ -535,30 +552,67 @@ document.getElementById('btnNovaReceita').addEventListener('click', async () => 
     document.getElementById('receitaId').value = '';
     document.getElementById('receitaData').value = new Date().toISOString().split('T')[0];
     document.getElementById('modalReceitaTitle').textContent = 'Nova Receita';
-    await populateOticaSelect('receitaOtica');
+
+    // Adiciona opção de Particular no select de Ótica
+    await populateOticaSelect('receitaOtica', 'Selecione ou Particular...');
+    const select = document.getElementById('receitaOtica');
+    const opt = document.createElement('option');
+    opt.value = 'particular';
+    opt.text = '👤 Atendimento Particular';
+    select.insertBefore(opt, select.options[1]); // Insere logo após o placeholder
+
     document.getElementById('receitaCliente').innerHTML = '<option value="">Selecione a ótica primeiro...</option>';
     openModal('modalReceita');
 });
 
-document.getElementById('receitaOtica').addEventListener('change', async (e) => {
-    if (isDirectReceitaInsertion) {
-        // Se for inserção direta, NÃO limpa o cliente, apenas permite mudar a loja de atendimento
-        // Mas a flag deve ser resetada na próxima vez que abrir o modal normalmente
-        return;
+// Event listener para mudança de ótica no modal de receita
+function setupReceitaOticaListener() {
+    const receitaOticaSelect = document.getElementById('receitaOtica');
+    if (receitaOticaSelect) {
+        console.log('✅ Event listener adicionado ao select de ótica');
+        receitaOticaSelect.addEventListener('change', async (e) => {
+            console.log('🔄 Ótica selecionada:', e.target.value);
+            if (isDirectReceitaInsertion) {
+                // Se for inserção direta, NÃO limpa o cliente, apenas permite mudar a loja de atendimento
+                // Mas a flag deve ser resetada na próxima vez que abrir o modal normalmente
+                return;
+            }
+            const oticaId = e.target.value;
+            if (!oticaId) {
+                document.getElementById('receitaCliente').innerHTML = '<option value="">Selecione a ótica primeiro...</option>';
+                return;
+            }
+            showLoading();
+
+            let query = supabaseClient.from('clientes').select('id, nome').order('nome');
+
+            if (oticaId === 'particular') {
+                query = query.is('otica_id', null);
+            } else {
+                query = query.eq('otica_id', oticaId);
+            }
+
+            const { data: clientes } = await query;
+            const select = document.getElementById('receitaCliente');
+            select.innerHTML = '<option value="">Selecione...</option>' + (clientes || []).map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+            console.log(`📋 ${clientes?.length || 0} clientes carregados`);
+            showLoading(false);
+        });
+    } else {
+        console.error('❌ Elemento receitaOtica não encontrado no DOM');
     }
-    const oticaId = e.target.value;
-    const { data: clientes } = await supabaseClient.from('clientes').select('id, nome').eq('otica_id', oticaId).order('nome');
-    const select = document.getElementById('receitaCliente');
-    select.innerHTML = '<option value="">Selecione...</option>' + (clientes || []).map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
-});
+}
+
+
 
 document.getElementById('formReceita').addEventListener('submit', async (e) => {
     e.preventDefault();
     showLoading();
 
     const id = document.getElementById('receitaId').value;
+    const oticaValue = document.getElementById('receitaOtica').value;
     const data = {
-        otica_id: document.getElementById('receitaOtica').value,
+        otica_id: oticaValue === 'particular' || !oticaValue ? null : oticaValue,
         cliente_id: document.getElementById('receitaCliente').value,
         data: document.getElementById('receitaData').value,
         tipo_servico: document.getElementById('receitaTipoServico').value,
@@ -595,15 +649,64 @@ document.getElementById('formReceita').addEventListener('submit', async (e) => {
 });
 
 window.editReceita = async function (id) {
-    await populateOticaSelect('receitaOtica');
-    const { data: receita } = await supabaseClient.from('receitas').select('*').eq('id', id).single();
+    // Adiciona opção de Particular
+    await populateOticaSelect('receitaOtica', 'Selecione ou Particular...');
+    const select = document.getElementById('receitaOtica');
+    const opt = document.createElement('option');
+    opt.value = 'particular';
+    opt.text = '👤 Atendimento Particular';
+    select.insertBefore(opt, select.options[1]);
+
+    const { data: receita } = await supabaseClient.from('receitas').select('*, clientes(id, nome, otica_id)').eq('id', id).single();
     if (!receita) return;
 
-    document.getElementById('receitaOtica').value = receita.otica_id;
+    // Se otica_id for null, setar como 'particular'
+    document.getElementById('receitaOtica').value = receita.otica_id || 'particular';
 
-    // Load clients for this otica
-    const { data: clientes } = await supabaseClient.from('clientes').select('id, nome').eq('otica_id', receita.otica_id).order('nome');
-    document.getElementById('receitaCliente').innerHTML = '<option value="">Selecione...</option>' + (clientes || []).map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+    let clientesList = [];
+
+    // Lógica para carregar clientes
+    if (!receita.otica_id) {
+        // Se for particular, carrega clientes particulares
+        const { data } = await supabaseClient.from('clientes').select('id, nome').is('otica_id', null).order('nome');
+        clientesList = data || [];
+    } else {
+        // Se tiver ótica, carrega clientes da ótica + visitantes
+        const { data: clientesCadastrados } = await supabaseClient
+            .from('clientes')
+            .select('id, nome, otica_id')
+            .eq('otica_id', receita.otica_id)
+            .order('nome');
+
+        const { data: receitasOutros } = await supabaseClient
+            .from('receitas')
+            .select('cliente_id, clientes(id, nome, otica_id)')
+            .eq('otica_id', receita.otica_id);
+
+        clientesList = clientesCadastrados || [];
+        const idsJaAdicionados = new Set(clientesList.map(c => c.id));
+
+        if (receitasOutros) {
+            receitasOutros.forEach(r => {
+                if (r.clientes && !idsJaAdicionados.has(r.clientes.id)) {
+                    clientesList.push(r.clientes);
+                    idsJaAdicionados.add(r.clientes.id);
+                }
+            });
+        }
+    }
+
+    // Ordenar por nome
+    clientesList.sort((a, b) => a.nome.localeCompare(b.nome));
+
+    // Renderizar select com indicação visual
+    document.getElementById('receitaCliente').innerHTML = '<option value="">Selecione...</option>' +
+        clientesList.map(c => {
+            // Se receita tem ótica e cliente é de outra ótica, marca com loja
+            // Se receita é particular, não precisa marcar
+            const label = (receita.otica_id && c.otica_id && c.otica_id !== receita.otica_id) ? ` 🏪` : '';
+            return `<option value="${c.id}">${c.nome}${label}</option>`;
+        }).join('');
 
     document.getElementById('receitaId').value = receita.id;
     document.getElementById('receitaCliente').value = receita.cliente_id;
@@ -698,7 +801,7 @@ window.viewReceita = async function (id) {
         <div class="receita-view-section" style="margin-top: 1rem;">
             <h4>💰 Pagamento</h4>
             <p><strong>Valor:</strong> ${Utils.formatCurrency(receita.valor)}</p>
-            <p><strong>Status:</strong> ${receita.pago_otica ? 'Pago pela Ótica' : (receita.pago_cliente ? 'Pago pelo Cliente' : 'Pendente')}</p>
+            <p><strong>Status:</strong> ${Utils.getPayerName(receita.pagador)}</p>
         </div>
 
         <div class="receita-view-section" style="margin-top: 1rem;">
@@ -740,7 +843,13 @@ async function renderPagamentos() {
     const filterStatus = document.getElementById('filterStatusPagamento').value;
 
     let query = supabaseClient.from('receitas').select('*, clientes(nome), oticas(nome)').order('data', { ascending: false });
-    if (filterOtica) query = query.eq('otica_id', filterOtica);
+
+    if (filterOtica === 'particular') {
+        query = query.is('otica_id', null);
+    } else if (filterOtica) {
+        query = query.eq('otica_id', filterOtica);
+    }
+
     if (filterStatus) query = query.eq('pagador', filterStatus);
 
     const { data: receitas } = await query;
@@ -753,7 +862,7 @@ async function renderPagamentos() {
     }
 
     container.innerHTML = receitas.map(r => `
-    < tr >
+        <tr>
             <td>${Utils.formatDate(r.data)}</td>
             <td>${r.clientes?.nome || '-'}</td>
             <td>${r.oticas?.nome || '-'}</td>
@@ -761,7 +870,7 @@ async function renderPagamentos() {
             <td><strong>${Utils.formatCurrency(r.valor)}</strong></td>
             <td><span class="status-badge ${r.pagador}">${Utils.getPayerName(r.pagador)}</span></td>
             <td class="actions"><button class="btn-secondary btn-sm" onclick="editReceita('${r.id}')">✏️</button></td>
-        </tr >
+        </tr>
     `).join('');
 }
 
@@ -865,26 +974,45 @@ document.getElementById('fileRestore').addEventListener('change', async (e) => {
 });
 
 // ===== HELPERS =====
-async function populateOticaSelect(selectId) {
+async function populateOticaSelect(selectId, placeholder = 'Selecione...') {
     const { data: oticas } = await supabaseClient.from('oticas').select('id, nome').order('nome');
     const select = document.getElementById(selectId);
-    select.innerHTML = '<option value="">Selecione...</option>' + (oticas || []).map(o => `< option value = "${o.id}" > ${o.nome}</option > `).join('');
+    if (!select) return;
+    select.innerHTML = `<option value="">${placeholder}</option>` + (oticas || []).map(o => `<option value="${o.id}">${o.nome}</option>`).join('');
 }
 
 async function populateClienteSelect(selectId, oticaId = null) {
     let query = supabaseClient.from('clientes').select('id, nome').order('nome');
-    if (oticaId) query = query.eq('otica_id', oticaId);
+
+    if (oticaId === 'particular') {
+        query = query.is('otica_id', null);
+    } else if (oticaId) {
+        query = query.eq('otica_id', oticaId);
+    }
+
     const { data: clientes } = await query;
     const select = document.getElementById(selectId);
-    select.innerHTML = '<option value="">Todos</option>' + (clientes || []).map(c => `< option value = "${c.id}" > ${c.nome}</option > `).join('');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">Todos</option>' + (clientes || []).map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
 }
 
 async function updateFilters() {
     const { data: oticas } = await supabaseClient.from('oticas').select('id, nome').order('nome');
-    const options = '<option value="">Todas</option>' + (oticas || []).map(o => `< option value = "${o.id}" > ${o.nome}</option > `).join('');
+
+    // Opções base para todos os filtros - AGORA INCLUI PARTICULAR
+    const allOptions = '<option value="">Todas</option>' +
+        '<option value="particular">👤 Pacientes Particulares / Sem Ótica</option>' +
+        (oticas || []).map(o => `<option value="${o.id}">${o.nome}</option>`).join('');
+
+    // Atualiza todos os filtros com a mesma lista completa
     ['filterOticaCliente', 'filterOticaReceita', 'filterOticaPagamento'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML = options;
+        if (el) {
+            const current = el.value;
+            el.innerHTML = allOptions;
+            if (current) el.value = current;
+        }
     });
 }
 
@@ -913,7 +1041,7 @@ async function updateDashboard() {
     document.getElementById('barCliente').style.height = (totalCliente / max * 150) + 'px';
 
     // Recent Activity
-    const { data: clientesList } = await supabaseClient.from('clientes').select('id, nome');
+    const { data: clientesList } = await supabaseClient.from('clientes').select('id, nome, otica_id'); // Selecionando otica_id para identificar particulares
     const recent = (receitas || []).sort((a, b) => new Date(b.data) - new Date(a.data)).slice(0, 5);
     const container = document.getElementById('recentActivity');
     if (recent.length === 0) {
@@ -921,9 +1049,13 @@ async function updateDashboard() {
     } else {
         container.innerHTML = recent.map(r => {
             const cliente = clientesList?.find(c => c.id === r.cliente_id);
+            // Identifica se é particular
+            const isParticular = cliente && !cliente.otica_id;
+            const nomeCliente = cliente ? (isParticular ? `${cliente.nome} (Particular)` : cliente.nome) : 'Cliente Removido';
+
             return `
             <div style="display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border);">
-                <span style="font-weight: 500;">${cliente?.nome || 'Cliente Removido'}</span>
+                <span style="font-weight: 500;">${nomeCliente}</span>
                 <span style="color: var(--text-muted); font-size: 0.9rem;">${Utils.formatDate(r.data)}</span>
             </div>`;
         }).join('');
@@ -933,6 +1065,10 @@ async function updateDashboard() {
 // ===== INIT =====
 async function loadSystem() {
     showLoading();
+
+    // Configura event listeners dos modais
+    setupReceitaOticaListener();
+
     await updateFilters();
     await updateDashboard();
     await renderOticas();

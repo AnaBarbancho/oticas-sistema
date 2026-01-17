@@ -27,7 +27,7 @@ document.getElementById('modals').innerHTML = `
                 <input type="hidden" id="clienteId">
                 <div class="form-row">
                     <div class="form-group flex-2"><label>Nome Completo *</label><input type="text" id="clienteNome" required></div>
-                    <div class="form-group"><label>Ótica *</label><select id="clienteOtica" required><option value="">Selecione...</option></select></div>
+                    <div class="form-group"><label>Ótica (opcional)</label><select id="clienteOtica"><option value="">Paciente Particular</option></select></div>
                 </div>
                 <div class="form-row">
                     <div class="form-group"><label>CPF</label><input type="text" id="clienteCPF" placeholder="000.000.000-00"></div>
