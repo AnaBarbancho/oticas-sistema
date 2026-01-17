@@ -503,17 +503,8 @@ async function renderReceitas() {
                 <span>📅 ${Utils.formatDate(r.data)} - ${Utils.getServiceName(r.tipo_servico)}</span>
             </div>
             <div class="receita-card-body">
-                <div class="prescricao-mini">
-                    <div class="prescricao-mini-item">
-                        <h5>👁️ Olho Direito (OD)</h5>
-                        <p>Esf: ${r.od_esferico || '-'} | Cil: ${r.od_cilindrico || '-'} | Eixo: ${r.od_eixo || '-'}°</p>
-                    </div>
-                    <div class="prescricao-mini-item">
-                        <h5>👁️ Olho Esquerdo (OE)</h5>
-                        <p>Esf: ${r.oe_esferico || '-'} | Cil: ${r.oe_cilindrico || '-'} | Eixo: ${r.oe_eixo || '-'}°</p>
-                    </div>
-                </div>
-                <p style="color: var(--text-muted); font-size: 0.875rem;">🏪 ${r.oticas?.nome || '-'}</p>
+                ${getReceitaGridHTML(r)}
+                <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.5rem;">🏪 ${r.oticas?.nome || '-'}</p>
             </div>
             <div class="receita-card-footer">
                 <span class="status-badge ${r.pagador}">${Utils.getPayerName(r.pagador)}</span>
@@ -624,46 +615,90 @@ window.editReceita = async function (id) {
     openModal('modalReceita');
 };
 
+// Helper para gerar o grid de receita (caixinhas)
+function getReceitaGridHTML(r) {
+    return `
+    <div class="receita-display-container">
+        <!-- OLHO DIREITO -->
+        <div class="receita-row">
+            <div class="receita-label">OD</div>
+            <div class="receita-values">
+                <div class="receita-box"><small>Esférico</small><span>${r.od_esferico || '-'}</span></div>
+                <div class="receita-box"><small>Cilíndrico</small><span>${r.od_cilindrico || '-'}</span></div>
+                <div class="receita-box"><small>Eixo</small><span>${r.od_eixo || '-'}°</span></div>
+                <div class="receita-box"><small>DNP/D.P</small><span>${r.od_dnp || '-'}</span></div>
+                <div class="receita-box"><small>Altura</small><span>${r.od_altura || '-'}</span></div>
+            </div>
+        </div>
+        <!-- OLHO ESQUERDO -->
+        <div class="receita-row">
+            <div class="receita-label" style="background:var(--bg-card-hover)">OE</div>
+            <div class="receita-values">
+                <div class="receita-box"><small>Esférico</small><span>${r.oe_esferico || '-'}</span></div>
+                <div class="receita-box"><small>Cilíndrico</small><span>${r.oe_cilindrico || '-'}</span></div>
+                <div class="receita-box"><small>Eixo</small><span>${r.oe_eixo || '-'}°</span></div>
+                <div class="receita-box"><small>DNP/D.P</small><span>${r.oe_dnp || '-'}</span></div>
+                <div class="receita-box"><small>Altura</small><span>${r.oe_altura || '-'}</span></div>
+            </div>
+        </div>
+        <!-- ADIÇÃO -->
+        <div style="display:flex; justify-content:center; margin-top:0.5rem; gap:1rem;">
+            <div class="receita-box" style="padding:0.25rem 1rem; width:auto;">
+                <small>Adição</small><span>${r.adicao || r.od_adicao || '-'}</span>
+            </div>
+        </div>
+    </div>
+    `;
+}
+
 window.viewReceita = async function (id) {
-    const { data: receita } = await supabaseClient.from('receitas').select('*, clientes(nome), oticas(nome)').eq('id', id).single();
+    showLoading();
+    const { data: receita, error } = await supabaseClient
+        .from('receitas')
+        // Selecionando campos extras para exibição completa
+        .select('*, clientes(nome, telefone), oticas(nome, endereco, telefone, responsavel)')
+        .eq('id', id)
+        .single();
+
+    showLoading(false);
     if (!receita) return;
 
-    document.getElementById('receitaViewContent').innerHTML = `
+    const container = document.getElementById('receitaViewContent');
+    container.innerHTML = `
         <div class="receita-view-header">
-            <h2>👓 Receita de Óculos</h2>
-            <p>${Utils.formatDate(receita.data)} - ${Utils.getServiceName(receita.tipo_servico)}</p>
+            <h2>${receita.clientes?.nome || 'Cliente'}</h2>
+            <p>${Utils.formatDate(receita.data)} • ${Utils.getServiceName(receita.tipo_servico)}</p>
         </div>
-        <div style="margin-bottom: 1.5rem;">
-            <p><strong>Cliente:</strong> ${receita.clientes?.nome || '-'}</p>
-            <p><strong>Ótica:</strong> ${receita.oticas?.nome || '-'}</p>
-        </div>
-        <div class="receita-view-grid">
-            <div class="receita-view-section">
-                <h4>👁️ Olho Direito (OD)</h4>
-                <div class="receita-view-row"><span>Esférico:</span><span>${receita.od_esferico || '-'}</span></div>
-                <div class="receita-view-row"><span>Cilíndrico:</span><span>${receita.od_cilindrico || '-'}</span></div>
-                <div class="receita-view-row"><span>Eixo:</span><span>${receita.od_eixo || '-'}°</span></div>
-                <div class="receita-view-row"><span>DNP:</span><span>${receita.od_dnp || '-'}</span></div>
-                <div class="receita-view-row"><span>Adição:</span><span>${receita.od_adicao || '-'}</span></div>
+
+        <div class="receita-view-info">
+             <div>
+                <strong style="display:block; color:var(--primary-light); margin-bottom:0.25rem;">🏠 Ótica</strong>
+                <span style="font-size:0.9rem;">${receita.oticas?.nome || '-'}</span><br>
+                <small style="color:var(--text-muted);">${receita.oticas?.telefone || ''}</small>
             </div>
-            <div class="receita-view-section">
-                <h4>👁️ Olho Esquerdo (OE)</h4>
-                <div class="receita-view-row"><span>Esférico:</span><span>${receita.oe_esferico || '-'}</span></div>
-                <div class="receita-view-row"><span>Cilíndrico:</span><span>${receita.oe_cilindrico || '-'}</span></div>
-                <div class="receita-view-row"><span>Eixo:</span><span>${receita.oe_eixo || '-'}°</span></div>
-                <div class="receita-view-row"><span>DNP:</span><span>${receita.oe_dnp || '-'}</span></div>
-                <div class="receita-view-row"><span>Adição:</span><span>${receita.oe_adicao || '-'}</span></div>
+             <div style="text-align:right;">
+                <strong style="display:block; color:var(--primary-light); margin-bottom:0.25rem;">📞 Contato Cliente</strong>
+                <span style="font-size:0.9rem;">${receita.clientes?.telefone || '-'}</span>
             </div>
         </div>
+        
+        ${getReceitaGridHTML(receita)}
+
         <div class="receita-view-section" style="margin-top: 1rem;">
             <h4>💰 Pagamento</h4>
-            <div class="receita-view-row"><span>Valor:</span><span>${Utils.formatCurrency(receita.valor)}</span></div>
-            <div class="receita-view-row"><span>Pago por:</span><span class="status-badge ${receita.pagador}">${Utils.getPayerName(receita.pagador)}</span></div>
+            <p><strong>Valor:</strong> ${Utils.formatCurrency(receita.valor)}</p>
+            <p><strong>Status:</strong> ${receita.pago_otica ? 'Pago pela Ótica' : (receita.pago_cliente ? 'Pago pelo Cliente' : 'Pendente')}</p>
         </div>
-        ${receita.observacoes ? `<p style="margin-top: 1rem; color: var(--text-muted);"><strong>Obs:</strong> ${receita.observacoes}</p>` : ''}
+
+        <div class="receita-view-section" style="margin-top: 1rem;">
+            <h4>📝 Observações</h4>
+            <p style="white-space: pre-wrap;">${receita.observacoes || 'Nenhuma'}</p>
+        </div>
     `;
+
     openModal('modalViewReceita');
 };
+
 
 window.deleteReceita = async function (id) {
     if (!confirm('Deseja realmente excluir esta receita?')) return;
@@ -707,7 +742,7 @@ async function renderPagamentos() {
     }
 
     container.innerHTML = receitas.map(r => `
-        <tr>
+    < tr >
             <td>${Utils.formatDate(r.data)}</td>
             <td>${r.clientes?.nome || '-'}</td>
             <td>${r.oticas?.nome || '-'}</td>
@@ -715,7 +750,7 @@ async function renderPagamentos() {
             <td><strong>${Utils.formatCurrency(r.valor)}</strong></td>
             <td><span class="status-badge ${r.pagador}">${Utils.getPayerName(r.pagador)}</span></td>
             <td class="actions"><button class="btn-secondary btn-sm" onclick="editReceita('${r.id}')">✏️</button></td>
-        </tr>
+        </tr >
     `).join('');
 }
 
@@ -758,11 +793,11 @@ document.getElementById('btnExportSheets').addEventListener('click', async () =>
     showLoading(false);
 
     let text = 'ÓTICAS\nNome\tTelefone\tEndereço\n';
-    (oticas || []).forEach(o => { text += `${o.nome}\t${o.telefone || ''}\t${o.endereco || ''}\n`; });
+    (oticas || []).forEach(o => { text += `${o.nome} \t${o.telefone || ''} \t${o.endereco || ''} \n`; });
     text += '\nCLIENTES\nNome\tTelefone\tÓtica\n';
-    (clientes || []).forEach(c => { text += `${c.nome}\t${c.telefone || ''}\t${c.oticas?.nome || ''}\n`; });
+    (clientes || []).forEach(c => { text += `${c.nome} \t${c.telefone || ''} \t${c.oticas?.nome || ''} \n`; });
     text += '\nRECEITAS\nData\tCliente\tÓtica\tServiço\tValor\tPagador\n';
-    (receitas || []).forEach(r => { text += `${r.data}\t${r.clientes?.nome || ''}\t${r.oticas?.nome || ''}\t${Utils.getServiceName(r.tipo_servico)}\t${r.valor}\t${Utils.getPayerName(r.pagador)}\n`; });
+    (receitas || []).forEach(r => { text += `${r.data} \t${r.clientes?.nome || ''} \t${r.oticas?.nome || ''} \t${Utils.getServiceName(r.tipo_servico)} \t${r.valor} \t${Utils.getPayerName(r.pagador)} \n`; });
 
     navigator.clipboard.writeText(text).then(() => showToast('Dados copiados! Cole no Google Sheets.'));
 });
@@ -822,7 +857,7 @@ document.getElementById('fileRestore').addEventListener('change', async (e) => {
 async function populateOticaSelect(selectId) {
     const { data: oticas } = await supabaseClient.from('oticas').select('id, nome').order('nome');
     const select = document.getElementById(selectId);
-    select.innerHTML = '<option value="">Selecione...</option>' + (oticas || []).map(o => `<option value="${o.id}">${o.nome}</option>`).join('');
+    select.innerHTML = '<option value="">Selecione...</option>' + (oticas || []).map(o => `< option value = "${o.id}" > ${o.nome}</option > `).join('');
 }
 
 async function populateClienteSelect(selectId, oticaId = null) {
@@ -830,12 +865,12 @@ async function populateClienteSelect(selectId, oticaId = null) {
     if (oticaId) query = query.eq('otica_id', oticaId);
     const { data: clientes } = await query;
     const select = document.getElementById(selectId);
-    select.innerHTML = '<option value="">Todos</option>' + (clientes || []).map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+    select.innerHTML = '<option value="">Todos</option>' + (clientes || []).map(c => `< option value = "${c.id}" > ${c.nome}</option > `).join('');
 }
 
 async function updateFilters() {
     const { data: oticas } = await supabaseClient.from('oticas').select('id, nome').order('nome');
-    const options = '<option value="">Todas</option>' + (oticas || []).map(o => `<option value="${o.id}">${o.nome}</option>`).join('');
+    const options = '<option value="">Todas</option>' + (oticas || []).map(o => `< option value = "${o.id}" > ${o.nome}</option > `).join('');
     ['filterOticaCliente', 'filterOticaReceita', 'filterOticaPagamento'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = options;
@@ -875,10 +910,10 @@ async function updateDashboard() {
     } else {
         container.innerHTML = recent.map(r => {
             const cliente = clientesList?.find(c => c.id === r.cliente_id);
-            return `<div style="display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border);">
+            return `< div style = "display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border);" >
                 <span>${cliente?.nome || 'Cliente'}</span>
                 <span style="color: var(--text-muted);">${Utils.formatDate(r.data)}</span>
-            </div>`;
+            </div > `;
         }).join('');
     }
 }
