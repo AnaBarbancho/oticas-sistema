@@ -313,7 +313,7 @@ window.viewHistoricoCliente = async function (id) {
         content.innerHTML = `
             <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                 ${receitas.map(r => `
-                    <button onclick="viewReceita('${r.id}')" 
+                    <button onclick="closeModal('modalHistoricoCliente'); viewReceita('${r.id}')" 
                             style="
                                 display: flex; 
                                 justify-content: space-between; 
