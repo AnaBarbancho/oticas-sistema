@@ -63,7 +63,7 @@ document.getElementById('dateDisplay').textContent = new Date().toLocaleDateStri
 // ===== ÓTICAS =====
 async function loadOticas() {
     showLoading();
-    const { data, error } = await supabase.from('oticas').select('*').order('nome');
+    const { data, error } = await supabaseClient.from('oticas').select('*').order('nome');
     showLoading(false);
     if (error) { showToast('Erro ao carregar óticas: ' + error.message, 'error'); return []; }
     return data || [];
@@ -120,9 +120,9 @@ document.getElementById('formOtica').addEventListener('submit', async (e) => {
 
     let error;
     if (id) {
-        ({ error } = await supabase.from('oticas').update(data).eq('id', id));
+        ({ error } = await supabaseClient.from('oticas').update(data).eq('id', id));
     } else {
-        ({ error } = await supabase.from('oticas').insert(data));
+        ({ error } = await supabaseClient.from('oticas').insert(data));
     }
 
     showLoading(false);
@@ -135,7 +135,7 @@ document.getElementById('formOtica').addEventListener('submit', async (e) => {
 });
 
 window.editOtica = async function (id) {
-    const { data: otica } = await supabase.from('oticas').select('*').eq('id', id).single();
+    const { data: otica } = await supabaseClient.from('oticas').select('*').eq('id', id).single();
     if (!otica) return;
 
     document.getElementById('oticaId').value = otica.id;
@@ -152,7 +152,7 @@ window.editOtica = async function (id) {
 window.deleteOtica = async function (id) {
     if (!confirm('Deseja realmente excluir esta ótica e todos os dados relacionados?')) return;
     showLoading();
-    const { error } = await supabase.from('oticas').delete().eq('id', id);
+    const { error } = await supabaseClient.from('oticas').delete().eq('id', id);
     showLoading(false);
     if (error) { showToast('Erro: ' + error.message, 'error'); return; }
     showToast('Ótica excluída!', 'error');
@@ -170,7 +170,7 @@ document.getElementById('searchOtica').addEventListener('input', renderOticas);
 
 // ===== CLIENTES =====
 async function loadClientes(oticaId = null) {
-    let query = supabase.from('clientes').select('*, oticas(nome)').order('nome');
+    let query = supabaseClient.from('clientes').select('*, oticas(nome)').order('nome');
     if (oticaId) query = query.eq('otica_id', oticaId);
     const { data, error } = await query;
     if (error) { showToast('Erro: ' + error.message, 'error'); return []; }
@@ -186,7 +186,7 @@ async function renderClientes() {
     if (search) clientes = clientes.filter(c => c.nome.toLowerCase().includes(search));
 
     // Get last receita for each client
-    const { data: receitas } = await supabase.from('receitas').select('cliente_id, data').order('data', { ascending: false });
+    const { data: receitas } = await supabaseClient.from('receitas').select('cliente_id, data').order('data', { ascending: false });
 
     const container = document.getElementById('clientesList');
     showLoading(false);
@@ -241,9 +241,9 @@ document.getElementById('formCliente').addEventListener('submit', async (e) => {
 
     let error;
     if (id) {
-        ({ error } = await supabase.from('clientes').update(data).eq('id', id));
+        ({ error } = await supabaseClient.from('clientes').update(data).eq('id', id));
     } else {
-        ({ error } = await supabase.from('clientes').insert(data));
+        ({ error } = await supabaseClient.from('clientes').insert(data));
     }
 
     showLoading(false);
@@ -257,7 +257,7 @@ document.getElementById('formCliente').addEventListener('submit', async (e) => {
 
 window.editCliente = async function (id) {
     await populateOticaSelect('clienteOtica');
-    const { data: cliente } = await supabase.from('clientes').select('*').eq('id', id).single();
+    const { data: cliente } = await supabaseClient.from('clientes').select('*').eq('id', id).single();
     if (!cliente) return;
 
     document.getElementById('clienteId').value = cliente.id;
@@ -277,7 +277,7 @@ window.editCliente = async function (id) {
 window.deleteCliente = async function (id) {
     if (!confirm('Deseja realmente excluir este cliente?')) return;
     showLoading();
-    const { error } = await supabase.from('clientes').delete().eq('id', id);
+    const { error } = await supabaseClient.from('clientes').delete().eq('id', id);
     showLoading(false);
     if (error) { showToast('Erro: ' + error.message, 'error'); return; }
     showToast('Cliente excluído!', 'error');
@@ -301,7 +301,7 @@ async function renderReceitas() {
     const filterCliente = document.getElementById('filterClienteReceita').value;
     const filterData = document.getElementById('filterDataReceita').value;
 
-    let query = supabase.from('receitas').select('*, clientes(nome), oticas(nome)').order('data', { ascending: false });
+    let query = supabaseClient.from('receitas').select('*, clientes(nome), oticas(nome)').order('data', { ascending: false });
     if (filterOtica) query = query.eq('otica_id', filterOtica);
     if (filterCliente) query = query.eq('cliente_id', filterCliente);
     if (filterData) query = query.eq('data', filterData);
@@ -360,7 +360,7 @@ document.getElementById('btnNovaReceita').addEventListener('click', async () => 
 
 document.getElementById('receitaOtica').addEventListener('change', async (e) => {
     const oticaId = e.target.value;
-    const { data: clientes } = await supabase.from('clientes').select('id, nome').eq('otica_id', oticaId).order('nome');
+    const { data: clientes } = await supabaseClient.from('clientes').select('id, nome').eq('otica_id', oticaId).order('nome');
     const select = document.getElementById('receitaCliente');
     select.innerHTML = '<option value="">Selecione...</option>' + (clientes || []).map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
 });
@@ -392,9 +392,9 @@ document.getElementById('formReceita').addEventListener('submit', async (e) => {
 
     let error;
     if (id) {
-        ({ error } = await supabase.from('receitas').update(data).eq('id', id));
+        ({ error } = await supabaseClient.from('receitas').update(data).eq('id', id));
     } else {
-        ({ error } = await supabase.from('receitas').insert(data));
+        ({ error } = await supabaseClient.from('receitas').insert(data));
     }
 
     showLoading(false);
@@ -409,13 +409,13 @@ document.getElementById('formReceita').addEventListener('submit', async (e) => {
 
 window.editReceita = async function (id) {
     await populateOticaSelect('receitaOtica');
-    const { data: receita } = await supabase.from('receitas').select('*').eq('id', id).single();
+    const { data: receita } = await supabaseClient.from('receitas').select('*').eq('id', id).single();
     if (!receita) return;
 
     document.getElementById('receitaOtica').value = receita.otica_id;
 
     // Load clients for this otica
-    const { data: clientes } = await supabase.from('clientes').select('id, nome').eq('otica_id', receita.otica_id).order('nome');
+    const { data: clientes } = await supabaseClient.from('clientes').select('id, nome').eq('otica_id', receita.otica_id).order('nome');
     document.getElementById('receitaCliente').innerHTML = '<option value="">Selecione...</option>' + (clientes || []).map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
 
     document.getElementById('receitaId').value = receita.id;
@@ -440,7 +440,7 @@ window.editReceita = async function (id) {
 };
 
 window.viewReceita = async function (id) {
-    const { data: receita } = await supabase.from('receitas').select('*, clientes(nome), oticas(nome)').eq('id', id).single();
+    const { data: receita } = await supabaseClient.from('receitas').select('*, clientes(nome), oticas(nome)').eq('id', id).single();
     if (!receita) return;
 
     document.getElementById('receitaViewContent').innerHTML = `
@@ -483,7 +483,7 @@ window.viewReceita = async function (id) {
 window.deleteReceita = async function (id) {
     if (!confirm('Deseja realmente excluir esta receita?')) return;
     showLoading();
-    const { error } = await supabase.from('receitas').delete().eq('id', id);
+    const { error } = await supabaseClient.from('receitas').delete().eq('id', id);
     showLoading(false);
     if (error) { showToast('Erro: ' + error.message, 'error'); return; }
     showToast('Receita excluída!', 'error');
@@ -508,7 +508,7 @@ async function renderPagamentos() {
     const filterOtica = document.getElementById('filterOticaPagamento').value;
     const filterStatus = document.getElementById('filterStatusPagamento').value;
 
-    let query = supabase.from('receitas').select('*, clientes(nome), oticas(nome)').order('data', { ascending: false });
+    let query = supabaseClient.from('receitas').select('*, clientes(nome), oticas(nome)').order('data', { ascending: false });
     if (filterOtica) query = query.eq('otica_id', filterOtica);
     if (filterStatus) query = query.eq('pagador', filterStatus);
 
@@ -540,9 +540,9 @@ document.getElementById('filterStatusPagamento').addEventListener('change', rend
 // ===== EXPORTAÇÃO =====
 document.getElementById('btnExportExcel').addEventListener('click', async () => {
     showLoading();
-    const { data: oticas } = await supabase.from('oticas').select('*');
-    const { data: clientes } = await supabase.from('clientes').select('*, oticas(nome)');
-    const { data: receitas } = await supabase.from('receitas').select('*, clientes(nome), oticas(nome)');
+    const { data: oticas } = await supabaseClient.from('oticas').select('*');
+    const { data: clientes } = await supabaseClient.from('clientes').select('*, oticas(nome)');
+    const { data: receitas } = await supabaseClient.from('receitas').select('*, clientes(nome), oticas(nome)');
     showLoading(false);
 
     const wb = XLSX.utils.book_new();
@@ -567,9 +567,9 @@ document.getElementById('btnExportExcel').addEventListener('click', async () => 
 
 document.getElementById('btnExportSheets').addEventListener('click', async () => {
     showLoading();
-    const { data: oticas } = await supabase.from('oticas').select('*');
-    const { data: clientes } = await supabase.from('clientes').select('*, oticas(nome)');
-    const { data: receitas } = await supabase.from('receitas').select('*, clientes(nome), oticas(nome)');
+    const { data: oticas } = await supabaseClient.from('oticas').select('*');
+    const { data: clientes } = await supabaseClient.from('clientes').select('*, oticas(nome)');
+    const { data: receitas } = await supabaseClient.from('receitas').select('*, clientes(nome), oticas(nome)');
     showLoading(false);
 
     let text = 'ÓTICAS\nNome\tTelefone\tEndereço\n';
@@ -584,9 +584,9 @@ document.getElementById('btnExportSheets').addEventListener('click', async () =>
 
 document.getElementById('btnBackup').addEventListener('click', async () => {
     showLoading();
-    const { data: oticas } = await supabase.from('oticas').select('*');
-    const { data: clientes } = await supabase.from('clientes').select('*');
-    const { data: receitas } = await supabase.from('receitas').select('*');
+    const { data: oticas } = await supabaseClient.from('oticas').select('*');
+    const { data: clientes } = await supabaseClient.from('clientes').select('*');
+    const { data: receitas } = await supabaseClient.from('receitas').select('*');
     showLoading(false);
 
     const backup = { oticas, clientes, receitas, exportedAt: new Date().toISOString() };
@@ -613,14 +613,14 @@ document.getElementById('fileRestore').addEventListener('change', async (e) => {
 
             showLoading();
             // Delete all existing data
-            await supabase.from('receitas').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            await supabase.from('clientes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            await supabase.from('oticas').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            await supabaseClient.from('receitas').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            await supabaseClient.from('clientes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            await supabaseClient.from('oticas').delete().neq('id', '00000000-0000-0000-0000-000000000000');
 
             // Insert backup data
-            if (data.oticas?.length) await supabase.from('oticas').insert(data.oticas);
-            if (data.clientes?.length) await supabase.from('clientes').insert(data.clientes);
-            if (data.receitas?.length) await supabase.from('receitas').insert(data.receitas);
+            if (data.oticas?.length) await supabaseClient.from('oticas').insert(data.oticas);
+            if (data.clientes?.length) await supabaseClient.from('clientes').insert(data.clientes);
+            if (data.receitas?.length) await supabaseClient.from('receitas').insert(data.receitas);
 
             showLoading(false);
             showToast('Backup restaurado!');
@@ -635,13 +635,13 @@ document.getElementById('fileRestore').addEventListener('change', async (e) => {
 
 // ===== HELPERS =====
 async function populateOticaSelect(selectId) {
-    const { data: oticas } = await supabase.from('oticas').select('id, nome').order('nome');
+    const { data: oticas } = await supabaseClient.from('oticas').select('id, nome').order('nome');
     const select = document.getElementById(selectId);
     select.innerHTML = '<option value="">Selecione...</option>' + (oticas || []).map(o => `<option value="${o.id}">${o.nome}</option>`).join('');
 }
 
 async function populateClienteSelect(selectId, oticaId = null) {
-    let query = supabase.from('clientes').select('id, nome').order('nome');
+    let query = supabaseClient.from('clientes').select('id, nome').order('nome');
     if (oticaId) query = query.eq('otica_id', oticaId);
     const { data: clientes } = await query;
     const select = document.getElementById(selectId);
@@ -649,7 +649,7 @@ async function populateClienteSelect(selectId, oticaId = null) {
 }
 
 async function updateFilters() {
-    const { data: oticas } = await supabase.from('oticas').select('id, nome').order('nome');
+    const { data: oticas } = await supabaseClient.from('oticas').select('id, nome').order('nome');
     const options = '<option value="">Todas</option>' + (oticas || []).map(o => `<option value="${o.id}">${o.nome}</option>`).join('');
     ['filterOticaCliente', 'filterOticaReceita', 'filterOticaPagamento'].forEach(id => {
         const el = document.getElementById(id);
@@ -658,9 +658,9 @@ async function updateFilters() {
 }
 
 async function updateDashboard() {
-    const { data: oticas } = await supabase.from('oticas').select('id');
-    const { data: clientes } = await supabase.from('clientes').select('id');
-    const { data: receitas } = await supabase.from('receitas').select('id, valor, pagador, data, cliente_id');
+    const { data: oticas } = await supabaseClient.from('oticas').select('id');
+    const { data: clientes } = await supabaseClient.from('clientes').select('id');
+    const { data: receitas } = await supabaseClient.from('receitas').select('id, valor, pagador, data, cliente_id');
 
     document.getElementById('totalOticas').textContent = oticas?.length || 0;
     document.getElementById('totalClientes').textContent = clientes?.length || 0;
@@ -682,7 +682,7 @@ async function updateDashboard() {
     document.getElementById('barCliente').style.height = (totalCliente / max * 150) + 'px';
 
     // Recent Activity
-    const { data: clientesList } = await supabase.from('clientes').select('id, nome');
+    const { data: clientesList } = await supabaseClient.from('clientes').select('id, nome');
     const recent = (receitas || []).sort((a, b) => new Date(b.data) - new Date(a.data)).slice(0, 5);
     const container = document.getElementById('recentActivity');
     if (recent.length === 0) {
