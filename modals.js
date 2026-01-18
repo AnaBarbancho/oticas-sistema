@@ -65,8 +65,7 @@ document.getElementById('modals').innerHTML = `
                                 <div class="prescricao-field"><label>Esférico</label><input type="text" id="odEsferico" placeholder="+0.00"></div>
                                 <div class="prescricao-field"><label>Cilíndrico</label><input type="text" id="odCilindrico" placeholder="-0.00"></div>
                                 <div class="prescricao-field"><label>Eixo</label><input type="number" id="odEixo" min="0" max="180" placeholder="0°"></div>
-                                <div class="prescricao-field"><label>DNP</label><input type="text" id="odDNP" placeholder="32"></div>
-                                <div class="prescricao-field"><label>Adição</label><input type="text" id="odAdicao" placeholder="+0.00"></div>
+                                <div class="prescricao-field"><label>AV</label><input type="text" id="odDNP" placeholder=""></div>
                             </div>
                         </div>
                         <div class="prescricao-section">
@@ -75,9 +74,15 @@ document.getElementById('modals').innerHTML = `
                                 <div class="prescricao-field"><label>Esférico</label><input type="text" id="oeEsferico" placeholder="+0.00"></div>
                                 <div class="prescricao-field"><label>Cilíndrico</label><input type="text" id="oeCilindrico" placeholder="-0.00"></div>
                                 <div class="prescricao-field"><label>Eixo</label><input type="number" id="oeEixo" min="0" max="180" placeholder="0°"></div>
-                                <div class="prescricao-field"><label>DNP</label><input type="text" id="oeDNP" placeholder="32"></div>
-                                <div class="prescricao-field"><label>Adição</label><input type="text" id="oeAdicao" placeholder="+0.00"></div>
+                                <div class="prescricao-field"><label>AV</label><input type="text" id="oeDNP" placeholder=""></div>
                             </div>
+                        </div>
+                    </div>
+                    <!-- Campo de Adição Único Centralizado -->
+                    <div style="display: flex; justify-content: center; margin-top: 1rem; border-top: 1px dashed var(--border); padding-top: 1rem;">
+                        <div class="prescricao-field" style="width: 150px;">
+                            <label style="text-align: center; width: 100%; display: block;">Adição (Perto)</label>
+                            <input type="text" id="receitaAdicao" placeholder="+0.00" style="text-align: center;">
                         </div>
                     </div>
                 </div>

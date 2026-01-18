@@ -194,6 +194,12 @@
                         id="btnExportSheets">Copiar</button>
                 </div>
                 <div class="export-card">
+                    <div class="export-icon">📝</div>
+                    <h3>PDF Preenchido</h3>
+                    <p>Gerar receita em PDF</p>
+                    <button class="btn-primary" id="btnGeneratePDF">Gerar PDF</button>
+                </div>
+                <div class="export-card">
                     <div class="export-icon">💾</div>
                     <h3>Backup</h3>
                     <p>Salve em JSON</p><button class="btn-outline" id="btnBackup">Backup</button>
@@ -239,6 +245,9 @@
 
     <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- PDF Lib -->
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
     <!-- Configuração do Supabase -->
     <script src="supabase-config.js?v=13"></script>
